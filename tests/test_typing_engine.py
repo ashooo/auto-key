@@ -204,12 +204,20 @@ class EngineTests(unittest.TestCase):
         unicode_sender.assert_called_once_with("'")
         self.assertEqual(backend.events, [])
 
-    def test_apostrophe_falls_back_to_ascii_key_if_unicode_input_fails(self):
+    def test_apostrophe_pastes_if_unicode_input_fails(self):
         backend = FakeKeyboard()
+        clipboard = FakeClipboard()
         engine = TypingEngine(lambda event: None, backend, random.Random(12))
-        with mock.patch.object(engine, "_send_windows_unicode", side_effect=OSError("blocked")):
+        with (
+            mock.patch("typing_engine._pyperclip", clipboard),
+            mock.patch.object(engine, "_send_windows_unicode", side_effect=OSError("blocked")),
+            mock.patch("typing_engine.time.sleep"),
+        ):
             engine._send_action(TypingAction("'", 1), settings())
-        self.assertEqual(backend.events, [("press", "'")])
+        self.assertEqual(clipboard.copies, ["'", "previous clipboard"])
+        self.assertIn(("down", "ctrl"), backend.events)
+        self.assertIn(("press", "v"), backend.events)
+        self.assertIn(("up", "ctrl"), backend.events)
 
     def test_human_typo_is_corrected_before_intended_character(self):
         backend = FakeKeyboard()

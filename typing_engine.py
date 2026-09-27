@@ -517,9 +517,11 @@ class TypingEngine:
                     self._send_windows_unicode(action.value)
                     return
                 except Exception:
-                    # Some elevated or custom controls reject Unicode events.
-                    # The regular ASCII key remains a useful second route.
-                    self._keyboard.press(action.value)
+                    # A normal key press is layout-dependent and can turn a quote
+                    # into a dead key.  Use the Unicode helper's clipboard fallback
+                    # so the literal character remains intact when an application
+                    # rejects the input event.
+                    self._send_unicode_with_fallback(action.value)
                     return
             self._keyboard.press(action.value)
             return
